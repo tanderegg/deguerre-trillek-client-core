@@ -1,33 +1,36 @@
-#include <SFML/System.hpp>
-#include <SFML/Window.hpp>
-#include "tlkGL.hh"
+#include <graphics_driver.hh>
+#include <input_driver.hh>
+#include <trillek_gl.hh>
+
+namespace trillek {
+    extern graphics_driver& get_graphics_driver();
+    extern input_driver& get_input_driver();
+}
 
 int
 main(int argc, char* argv[])
 {
-    std::locale locale;
-    sf::String title(L"Trillek m1 test");
-    sf::Window mainWin(sf::VideoMode(800,600), title);
+    trillek::graphics_driver& graphics = trillek::get_graphics_driver();
+    trillek::input_driver& input = trillek::get_input_driver();
 
-    mainWin.setFramerateLimit(24);
+    graphics.init();
+    input.init();
 
-    while (mainWin.isOpen())
+    // input.capture_mouse(false);
+
+    for (;;)
     {
-        sf::Event event;
-        while (mainWin.pollEvent(event))
-        {
-            if (event.type == sf::Event::Closed)
-            {
-                mainWin.close();
-            }
-        }
-        mainWin.setActive();
-
+        graphics.begin_rendering();
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        mainWin.display();
+        graphics.end_rendering();
+        graphics.swap_buffers();
     }
+
+    graphics.pre_shutdown();
+    input.pre_shutdown();
+    graphics.shutdown();
+    input.shutdown();
 }
 
 

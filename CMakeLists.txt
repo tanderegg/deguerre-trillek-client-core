@@ -15,6 +15,10 @@ endif(BUILD_tests)
 
 set(CMAKE_MODULE_PATH ${trillek-client_SOURCE_DIR}/cmake)
 
+set(TRILLEK_INCLUDE_DIRS
+    ${trillek-client_SOURCE_DIR}/src/include
+)
+
 include(Platform)
 
 add_subdirectory(src)
