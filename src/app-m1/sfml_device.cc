@@ -4,11 +4,14 @@
 #include <SFML/System.hpp>
 #include <SFML/Window.hpp>
 #include <cstdlib>
+#include <iostream>
 
 namespace trillek { namespace detail {
 
 struct sfml_device {
     sf::Window mMainWin;
+    sf::Vector2u mWinSize;
+    sf::Vector2i mWinCentre;
 
     bool mInputActive;
     bool mMouseActive;
@@ -21,6 +24,9 @@ struct sfml_device {
     {
         mMainWin.create(sf::VideoMode(800,600),
             L"Trillek m1 test", sf::Style::Titlebar);
+        mWinSize = mMainWin.getSize();
+        mWinCentre.x = mWinSize.x / 2;
+        mWinCentre.y = mWinSize.y / 2;
         dispatch_events();
     }
 
@@ -30,6 +36,13 @@ struct sfml_device {
         {
             mMainWin.close();
         }
+    }
+
+    void force_mouse_location()
+    {
+        sf::Mouse::setPosition(mWinCentre, mMainWin);
+        mMouseX = mWinCentre.x;
+        mMouseY = mWinCentre.y;
     }
 
     void dispatch_events();
@@ -49,16 +62,16 @@ struct sfml_device {
         mMouseActive = true;
         mMainWin.setMouseCursorVisible(false);
 
-        sf::Vector2u wndSize = mMainWin.getSize();
         sf::Vector2i pos = sf::Mouse::getPosition(mMainWin);
         mMouseInWindow
-            = pos.x >= 0 && pos.x < wndSize.x
-            && pos.y >= 0 && pos.y < wndSize.y;
+            = pos.x >= 0 && pos.x < mWinSize.x
+            && pos.y >= 0 && pos.y < mWinSize.y;
         if (mMouseInWindow)
         {
             mMouseX = pos.x;
             mMouseY = pos.y;
         }
+        force_mouse_location();
     }
 
     void deactivate_mouse()
@@ -105,7 +118,7 @@ sfml_device::dispatch_events()
         {
             case sf::Event::KeyPressed:
             {
-                // std::cerr << "Key down: " << (unsigned)event.key.code << '\n';
+                std::cerr << "Key down: " << (unsigned)event.key.code << '\n';
                 if (event.key.code == sf::Keyboard::Escape)
                 {
                     std::exit(0);
@@ -115,7 +128,7 @@ sfml_device::dispatch_events()
 
             case sf::Event::KeyReleased:
             {
-                // std::cerr << "Key up: " << (unsigned)event.key.code << '\n';
+                std::cerr << "Key up: " << (unsigned)event.key.code << '\n';
                 break;
             }
 
@@ -133,7 +146,8 @@ sfml_device::dispatch_events()
                 {
                     mMouseX = event.mouseMove.x;
                     mMouseY = event.mouseMove.y;
-                    // std::cerr << "Mouse move (" << dx << ", " << dy << ", 0)\n";
+                    std::cerr << "Mouse move (" << dx << ", " << dy << ", 0)\n";
+                    force_mouse_location();
                 }
                 break;
             }
@@ -160,6 +174,7 @@ sfml_device::dispatch_events()
                 mMouseX = pos.x;
                 mMouseY = pos.y;
                 mMouseInWindow = true;
+                force_mouse_location();
                 break;
             }
 
@@ -170,6 +185,7 @@ sfml_device::dispatch_events()
                     break;
 	        }
                 mMouseInWindow = false;
+                force_mouse_location();
                 break;
             }
 
