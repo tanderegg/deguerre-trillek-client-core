@@ -25,6 +25,7 @@ struct sfml_device {
         mMainWin.create(sf::VideoMode(800,600),
             L"Trillek m1 test", sf::Style::Titlebar);
         mWinSize = mMainWin.getSize();
+        mMainWin.setKeyRepeatEnabled(false);
         mWinCentre.x = mWinSize.x / 2;
         mWinCentre.y = mWinSize.y / 2;
         dispatch_events();
