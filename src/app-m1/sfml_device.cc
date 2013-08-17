@@ -33,8 +33,7 @@ struct sfml_device {
 
     void close_window()
     {
-        if (mMainWin.isOpen())
-        {
+        if (mMainWin.isOpen()) {
             mMainWin.close();
         }
     }
@@ -67,8 +66,7 @@ struct sfml_device {
         mMouseInWindow
             = pos.x >= 0 && pos.x < mWinSize.x
             && pos.y >= 0 && pos.y < mWinSize.y;
-        if (mMouseInWindow)
-        {
+        if (mMouseInWindow) {
             mMouseX = pos.x;
             mMouseY = pos.y;
         }
@@ -77,8 +75,7 @@ struct sfml_device {
 
     void deactivate_mouse()
     {
-        if (mMouseActive)
-        {
+        if (mMouseActive) {
             mMainWin.setMouseCursorVisible(true);
             mMouseActive = false;
         }
@@ -91,8 +88,7 @@ struct sfml_device {
     
     void deactivate_input()
     {
-        if (mInputActive)
-        {
+        if (mInputActive) {
             mInputActive = false;
         }
     }
@@ -113,10 +109,8 @@ void
 sfml_device::dispatch_events()
 {
     sf::Event event;
-    while (mMainWin.pollEvent(event))
-    {
-        switch (event.type)
-        {
+    while (mMainWin.pollEvent(event)) {
+        switch (event.type) {
             case sf::Event::KeyPressed:
             {
                 std::cerr << "Key down: " << (unsigned)event.key.code << '\n';
