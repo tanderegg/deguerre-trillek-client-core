@@ -31,7 +31,7 @@ if (MSVC)
     message(WARNING "This build has not yet been tested with VC++")
     set(PLATFORM_FLAGS)
 else (MSVC)
-    set(PLATFORM_FLAGS "-Winline" "-Wall" "-fomit-frame-pointer" "-ffast-math")
+    set(PLATFORM_FLAGS "-Winline" "-Wall" "-fomit-frame-pointer" "-ffast-math" "-std=c++11")
 endif (MSVC)
 
 add_definitions(${PLATFORM_FLAGS})
