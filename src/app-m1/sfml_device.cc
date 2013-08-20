@@ -1,11 +1,12 @@
 #include "graphics_driver.hh"
 #include "input_driver.hh"
+#include "system_event.hh"
 #include "keycodes.hh"
 
 #include <SFML/System.hpp>
 #include <SFML/Window.hpp>
+#include <cstddef>
 #include <cstdlib>
-#include <iostream>
 
 namespace trillek { namespace detail {
 
@@ -13,6 +14,8 @@ struct sfml_device {
     sf::Window mMainWin;
     sf::Vector2u mWinSize;
     sf::Vector2i mWinCentre;
+
+    system_event_queue* mQueue;
 
     bool mInputActive;
     bool mMouseActive;
@@ -65,8 +68,8 @@ struct sfml_device {
 
         sf::Vector2i pos = sf::Mouse::getPosition(mMainWin);
         mMouseInWindow
-            = pos.x >= 0 && pos.x < mWinSize.x
-            && pos.y >= 0 && pos.y < mWinSize.y;
+            = pos.x >= 0 && pos.x < (int)mWinSize.x
+            && pos.y >= 0 && pos.y < (int)mWinSize.y;
         if (mMouseInWindow) {
             mMouseX = pos.x;
             mMouseY = pos.y;
@@ -203,8 +206,7 @@ struct sfml_device {
         default:                        return K_UNKNOWN;
         }
     }
-    
-    
+
     sfml_device()
     {
         mInputActive = false;
@@ -213,6 +215,8 @@ struct sfml_device {
 
         mMouseX = 0;
         mMouseY = 0;
+
+        mQueue = nullptr;
     }
 };
 
@@ -222,22 +226,26 @@ sfml_device::dispatch_events()
 {
     sf::Event event;
     while (mMainWin.pollEvent(event)) {
+        if (!mInputActive) {
+            continue;
+        }
+
         switch (event.type) {
             case sf::Event::KeyPressed:
             {
-                trillek::keycode_t key = translate_key(event.key.code);
-                std::cerr << "Key down: " << key << '\n';
-                if (key == K_ESCAPE)
-                {
-                    std::exit(0);
-                }
+                if (mQueue) {
+                    trillek::keycode_t key = translate_key(event.key.code);
+                    mQueue->push(system_event_t(EV_KEY, EV_K_DOWN, key));
+                } 
                 break;
             }
 
             case sf::Event::KeyReleased:
             {
-                trillek::keycode_t key = translate_key(event.key.code);
-                std::cerr << "Key up: " << key << '\n';
+                if (mQueue) {
+                    trillek::keycode_t key = translate_key(event.key.code);
+                    mQueue->push(system_event_t(EV_KEY, EV_K_UP, key));
+                } 
                 break;
             }
 
@@ -251,12 +259,20 @@ sfml_device::dispatch_events()
                 int dx = event.mouseMove.x - mMouseX;
                 int dy = event.mouseMove.y - mMouseY;
 
-                if (dx || dy)
+                if (!dx && !dy)
                 {
-                    mMouseX = event.mouseMove.x;
-                    mMouseY = event.mouseMove.y;
-                    std::cerr << "Mouse move (" << dx << ", " << dy << ", 0)\n";
-                    force_mouse_location();
+                    break;
+                }
+                mMouseX = event.mouseMove.x;
+                mMouseY = event.mouseMove.y;
+                force_mouse_location();
+                if (mQueue) {
+                    if (dx) {
+                        mQueue->push(system_event_t(EV_MOUSE, EV_M_DX, dx));
+                    }
+                    if (dy) {
+                        mQueue->push(system_event_t(EV_MOUSE, EV_M_DY, dy));
+                    }
                 }
                 break;
             }
@@ -268,8 +284,9 @@ sfml_device::dispatch_events()
                     break;
                 }
                 int dz = event.mouseWheel.delta;
-                std::cerr << "Mouse move (0, 0, " << dz << ")\n";
-                // Post mouse event here
+                if (mQueue && dz) {
+                    mQueue->push(system_event_t(EV_MOUSE, EV_M_DZ, dz));
+                }
                 break;
             }
 
@@ -375,6 +392,10 @@ struct sfml_input_driver : public input_driver {
         {
             sSfmlDevice.deactivate_mouse();
         }
+    }
+
+    void set_system_event_queue(system_event_queue* pQueue) {
+        sSfmlDevice.mQueue = pQueue;
     }
 };
 

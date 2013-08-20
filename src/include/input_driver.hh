@@ -5,9 +5,13 @@
 
 namespace trillek {
 
+    class system_event_queue;
+
     class input_driver : public subsystem
     {
     public:
+        virtual void set_system_event_queue(system_event_queue* pQueue) = 0;
+
         virtual void capture_mouse(bool pCapture) = 0;
     };
 
