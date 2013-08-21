@@ -1,3 +1,4 @@
+#include <subsystem.hh>
 #include <graphics_driver.hh>
 #include <input_driver.hh>
 #include <system_event.hh>
@@ -9,6 +10,19 @@ namespace trillek {
     extern graphics_driver& get_graphics_driver();
     extern input_driver& get_input_driver();
     extern system_event_queue& get_system_event_queue();
+}
+
+
+void
+load_subsystems(trillek::subsystem_manager& pMgr)
+{
+    using namespace trillek;
+    std::cerr << "Graphics driver interface = " << graphics_driver::s_interface << '\n';
+    std::cerr << "Input driver interface = " << input_driver::s_interface << '\n';
+    std::cerr << "System event queue interface = " << system_event_queue::s_interface << '\n';
+    pMgr.load(graphics_driver::s_interface, get_graphics_driver());
+    pMgr.load(input_driver::s_interface, get_input_driver());
+    pMgr.load(system_event_queue::s_interface, get_system_event_queue());
 }
 
 
@@ -70,19 +84,16 @@ process_event(const trillek::system_event_t& pEvent) {
 }
 
 int
-main(int argc, char* argv[])
-{
+main(int argc, char* argv[]) {
     using namespace trillek;
 
-    graphics_driver& graphics = get_graphics_driver();
-    input_driver& input = get_input_driver();
-    system_event_queue& evqueue = get_system_event_queue();
+    subsystem_manager& mgr = standard_subsystem_manager();
 
-    graphics.init();
-    input.init();
-    evqueue.init();
+    load_subsystems(mgr);
+    mgr.initialise();
 
-    input.set_system_event_queue(&evqueue);
+    system_event_queue& evqueue = mgr.lookup<system_event_queue>();
+    graphics_driver& graphics = mgr.lookup<graphics_driver>();
 
     // input.capture_mouse(false);
 
@@ -103,11 +114,8 @@ main(int argc, char* argv[])
         graphics.end_rendering();
         graphics.swap_buffers();
     }
-
-    graphics.pre_shutdown();
-    input.pre_shutdown();
-    graphics.shutdown();
-    input.shutdown();
+    mgr.pre_shutdown();
+    mgr.shutdown();
 }
 
 

@@ -8,6 +8,8 @@ namespace trillek {
     class graphics_driver : public subsystem
     {
     public:
+        static constexpr interface_key_t s_interface = "GraphicsDriver-1";
+
         virtual void begin_rendering() = 0;
         virtual void end_rendering() = 0;
         virtual void swap_buffers() = 0;

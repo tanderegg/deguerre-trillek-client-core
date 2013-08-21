@@ -24,8 +24,7 @@ struct sfml_device {
     int mMouseX;
     int mMouseY;
 
-    void open_window()
-    {
+    void open_window() {
         mMainWin.create(sf::VideoMode(800,600),
             L"Trillek m1 test", sf::Style::Titlebar);
         mWinSize = mMainWin.getSize();
@@ -35,15 +34,13 @@ struct sfml_device {
         dispatch_events();
     }
 
-    void close_window()
-    {
+    void close_window() {
         if (mMainWin.isOpen()) {
             mMainWin.close();
         }
     }
 
-    void force_mouse_location()
-    {
+    void force_mouse_location() {
         sf::Mouse::setPosition(mWinCentre, mMainWin);
         mMouseX = mWinCentre.x;
         mMouseY = mWinCentre.y;
@@ -51,18 +48,15 @@ struct sfml_device {
 
     void dispatch_events();
 
-    void activate_for_gl()
-    {
+    void activate_for_gl() {
         mMainWin.setActive();
     }
 
-    void swap_buffers()
-    {
+    void swap_buffers() {
         mMainWin.display();
     }
 
-    void activate_mouse()
-    {
+    void activate_mouse() {
         mMouseActive = true;
         mMainWin.setMouseCursorVisible(false);
 
@@ -77,31 +71,26 @@ struct sfml_device {
         force_mouse_location();
     }
 
-    void deactivate_mouse()
-    {
+    void deactivate_mouse() {
         if (mMouseActive) {
             mMainWin.setMouseCursorVisible(true);
             mMouseActive = false;
         }
     }
 
-    void activate_input()
-    {
+    void activate_input() {
         mInputActive = true;
     }
     
-    void deactivate_input()
-    {
+    void deactivate_input() {
         if (mInputActive) {
             mInputActive = false;
         }
     }
 
     trillek::keycode_t
-    translate_key(sf::Keyboard::Key pKey)
-    {
-        switch (pKey)
-        {
+    translate_key(sf::Keyboard::Key pKey) {
+        switch (pKey) {
         case sf::Keyboard::A:           return trillek::k('a');
         case sf::Keyboard::B:           return trillek::k('b');
         case sf::Keyboard::C:           return trillek::k('c');
@@ -207,8 +196,7 @@ struct sfml_device {
         }
     }
 
-    sfml_device()
-    {
+    sfml_device() {
         mInputActive = false;
         mMouseActive = false;
         mMouseInWindow = false;
@@ -251,16 +239,14 @@ sfml_device::dispatch_events()
 
             case sf::Event::MouseMoved:
             {
-                if (!mMouseActive)
-                {
+                if (!mMouseActive) {
                     break;
                 }
 
                 int dx = event.mouseMove.x - mMouseX;
                 int dy = event.mouseMove.y - mMouseY;
 
-                if (!dx && !dy)
-                {
+                if (!dx && !dy) {
                     break;
                 }
                 mMouseX = event.mouseMove.x;
@@ -277,10 +263,8 @@ sfml_device::dispatch_events()
                 break;
             }
 
-            case sf::Event::MouseWheelMoved:
-            {
-                if (!mMouseActive)
-                {
+            case sf::Event::MouseWheelMoved: {
+                if (!mMouseActive) {
                     break;
                 }
                 int dz = event.mouseWheel.delta;
@@ -290,8 +274,7 @@ sfml_device::dispatch_events()
                 break;
             }
 
-            case sf::Event::MouseEntered:
-            {
+            case sf::Event::MouseEntered: {
                 if (!mMouseActive)
                 {
                     break;
@@ -304,10 +287,8 @@ sfml_device::dispatch_events()
                 break;
             }
 
-            case sf::Event::MouseLeft:
-            {
-                if (!mMouseActive)
-                {
+            case sf::Event::MouseLeft: {
+                if (!mMouseActive) {
                     break;
                 }
                 mMouseInWindow = false;
@@ -315,8 +296,7 @@ sfml_device::dispatch_events()
                 break;
             }
 
-            default:
-            {
+            default: {
                 break;
             }
         }
@@ -328,34 +308,31 @@ static sfml_device sSfmlDevice;
 
 
 struct sfml_graphics_driver : public graphics_driver {
-    // From subsystem
-    void init()
-    {
+    interface_key_t implements() const {
+        return graphics_driver::s_interface;
+    }
+
+    void init(const subsystem_manager& pMgr) {
         sSfmlDevice.open_window();
     }
 
-    void pre_shutdown()
-    {
+    void pre_shutdown() {
     }
 
-    void shutdown()
-    {
+    void shutdown() {
         sSfmlDevice.close_window();
     }
 
 
-    void begin_rendering()
-    {
+    void begin_rendering() {
         sSfmlDevice.dispatch_events();
         sSfmlDevice.activate_for_gl();
     }
 
-    void end_rendering()
-    {
+    void end_rendering() {
     }
 
-    void swap_buffers()
-    {
+    void swap_buffers() {
         sSfmlDevice.swap_buffers();
     }
 
@@ -365,37 +342,32 @@ static sfml_graphics_driver sGraphicsDriver;
 
 
 struct sfml_input_driver : public input_driver {
+    interface_key_t implements() const {
+        return input_driver::s_interface;
+    }
 
-    void init()
-    {
+    void init(const subsystem_manager& pMgr) {
+         system_event_queue& evqueue = pMgr.lookup<system_event_queue>();
+         sSfmlDevice.mQueue = &evqueue;
          sSfmlDevice.activate_mouse();
          sSfmlDevice.activate_input();
     }
 
-    void pre_shutdown()
-    {
+    void pre_shutdown() {
          sSfmlDevice.deactivate_input();
          sSfmlDevice.deactivate_mouse();
     }
 
-    void shutdown()
-    {
+    void shutdown() {
     }
 
-    void capture_mouse(bool pCapture)
-    {
-        if (pCapture)
-        {
+    void capture_mouse(bool pCapture) {
+        if (pCapture) {
             sSfmlDevice.activate_mouse();
         }
-        else
-        {
+        else {
             sSfmlDevice.deactivate_mouse();
         }
-    }
-
-    void set_system_event_queue(system_event_queue* pQueue) {
-        sSfmlDevice.mQueue = pQueue;
     }
 };
 
@@ -405,13 +377,11 @@ static sfml_input_driver sInputDriver;
 
 
 namespace trillek {
-    graphics_driver& get_graphics_driver()
-    {
+    graphics_driver& get_graphics_driver() {
         return detail::sGraphicsDriver;
     }
 
-    input_driver& get_input_driver()
-    {
+    input_driver& get_input_driver() {
         return detail::sInputDriver;
     }
 }

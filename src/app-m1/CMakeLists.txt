@@ -5,6 +5,7 @@ set(trillek-client-m1_SRCS
     main.cc
     sfml_device.cc
     system_event_queue.cc
+    subsystem_manager.cc
 )
 
 add_executable(trillek-client-m1 ${trillek-client-m1_SRCS})

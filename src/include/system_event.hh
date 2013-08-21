@@ -65,6 +65,8 @@ namespace trillek {
     class system_event_queue : public subsystem
     {
     public:
+        static constexpr interface_key_t s_interface = "SystemEventQueue-1";
+
         virtual void clear() = 0;
 
         virtual void push(system_event_t pEvent) = 0;

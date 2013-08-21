@@ -9,7 +9,6 @@ if (CMAKE_HOST_APPLE)
 else (CMAKE_HOST_APPLE)
     # OS X is a Unix, but it's not a normal Unix as far as search paths go.
     if (CMAKE_HOST_UNIX)
-        message(WARNING "This build has not yet been tested on Unix")
         set(TRILLEK_SEARCH_PATHS
             /usr
             /usr/local

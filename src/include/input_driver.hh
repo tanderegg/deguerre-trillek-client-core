@@ -10,7 +10,7 @@ namespace trillek {
     class input_driver : public subsystem
     {
     public:
-        virtual void set_system_event_queue(system_event_queue* pQueue) = 0;
+        static constexpr interface_key_t s_interface = "InputDriver-1";
 
         virtual void capture_mouse(bool pCapture) = 0;
     };

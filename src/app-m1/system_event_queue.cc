@@ -23,7 +23,11 @@ public:
         mHead = mTail = 0;
     }
 
-    void init() {
+    interface_key_t implements() const {
+        return system_event_queue::s_interface;
+    }
+
+    void init(const subsystem_manager& pMgr) {
         mActive = true;
     }
 
