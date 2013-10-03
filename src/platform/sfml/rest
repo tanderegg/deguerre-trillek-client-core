@@ -1,21 +1,33 @@
-#include "graphics_driver.hh"
-#include "input_driver.hh"
-#include "system_event.hh"
-#include "keycodes.hh"
+#include <platform_subsystem.hh>
+#include <window_manager.hh>
+#include <window.hh>
+#include <system_event.hh>
+#include <keycodes.hh>
+#include <graphics_device_gl.hh>
+#include <window_target_sfml.hh>
 
 #include <SFML/System.hpp>
 #include <SFML/Window.hpp>
 #include <cstddef>
 #include <cstdlib>
 
+namespace {
+    static constexpr uint32_t s_width = 800;
+    static constexpr uint32_t s_height = 600;
+}
+
 namespace trillek { namespace detail {
 
-struct sfml_device {
+struct sfml_window : public window {
     sf::Window mMainWin;
     sf::Vector2u mWinSize;
     sf::Vector2i mWinCentre;
+    sf::ContextSettings mContextSettings;
 
-    system_event_queue* mQueue;
+    std::shared_ptr<graphics_device_gl> mDevice;
+    std::shared_ptr<window_target_sfml> mTarget;
+
+    system_event_queue& mQueue;
 
     bool mInputActive;
     bool mMouseActive;
@@ -24,10 +36,51 @@ struct sfml_device {
     int mMouseX;
     int mMouseY;
 
-    void open_window() {
-        mMainWin.create(sf::VideoMode(800,600),
-            L"Trillek m1 test", sf::Style::Titlebar);
+    sfml_window(system_event_queue& pQueue)
+            : mQueue(pQueue) {
+        mInputActive = false;
+        mMouseActive = false;
+        mMouseInWindow = false;
+
+        mMouseX = 0;
+        mMouseY = 0;
+    }
+
+
+    virtual ~sfml_window() {
+    }
+
+    std::shared_ptr<graphics_device> get_graphics_device() {
+        return mDevice;
+    }
+
+    std::shared_ptr<window_target> get_window_target() {
+        return mTarget;
+    }
+
+    void get_dimensions(uint32_t& pWidth, uint32_t& pHeight) const
+    {
+        pWidth = mWinSize.x; 
+        pHeight = mWinSize.y; 
+    }
+
+    virtual void get_config(graphics_config_t& pConfig) const
+    {
+        pConfig.mMajorVersion = mContextSettings.majorVersion;
+        pConfig.mMinorVersion = mContextSettings.minorVersion;
+        pConfig.mDepthBits = mContextSettings.depthBits;
+        pConfig.mStencilBits = mContextSettings.stencilBits;
+        pConfig.mAntialiasingLevel = mContextSettings.antialiasingLevel;
+    }
+
+    void
+    open_window() {
+        sf::ContextSettings ctx(32, 8, 0, 3, 0);
+        mMainWin.create(sf::VideoMode(s_width,s_height),
+            L"Trillek m1 test", sf::Style::Titlebar, ctx);
         mWinSize = mMainWin.getSize();
+        mContextSettings = mMainWin.getSettings();
+        mMainWin.setFramerateLimit(30);
         mMainWin.setKeyRepeatEnabled(false);
         mWinCentre.x = mWinSize.x / 2;
         mWinCentre.y = mWinSize.y / 2;
@@ -196,21 +249,58 @@ struct sfml_device {
         }
     }
 
-    sfml_device() {
-        mInputActive = false;
-        mMouseActive = false;
-        mMouseInWindow = false;
+};
 
-        mMouseX = 0;
-        mMouseY = 0;
 
-        mQueue = nullptr;
+struct sfml_window_manager : public window_manager {
+    std::shared_ptr<graphics_device_gl> mDevice;
+    std::shared_ptr<sfml_window> mMainWindow;
+    system_event_queue* mQueue;
+
+    void pre_init()
+    {
+    }
+
+    std::shared_ptr<window> get_main_window()
+    {
+        return mMainWindow;
+    }
+
+    void init(const subsystem_manager& pMgr) {
+        system_event_queue& evqueue = pMgr.lookup<system_event_queue>();
+        mQueue = &evqueue;
+	mMainWindow = std::make_shared<sfml_window>(evqueue);
+        mMainWindow->mDevice = mDevice;
+        mMainWindow->open_window();
+        mMainWindow->activate_mouse();
+        mMainWindow->activate_input();
+    }
+
+    void post_init()
+    {
+    }
+
+    void shutdown() {
+        mMainWindow->close_window();
+    }
+
+    void frame() {
+        mMainWindow->dispatch_events();
+    }
+
+    sfml_window_manager(std::shared_ptr<graphics_device_gl> pDevice)
+        : mDevice(std::move(pDevice))
+    {
+    }
+
+    ~sfml_window_manager()
+    {
     }
 };
 
 
 void
-sfml_device::dispatch_events()
+sfml_window::dispatch_events()
 {
     sf::Event event;
     while (mMainWin.pollEvent(event)) {
@@ -221,19 +311,15 @@ sfml_device::dispatch_events()
         switch (event.type) {
             case sf::Event::KeyPressed:
             {
-                if (mQueue) {
-                    trillek::keycode_t key = translate_key(event.key.code);
-                    mQueue->push(system_event_t(EV_KEY, EV_K_DOWN, key));
-                } 
+                trillek::keycode_t key = translate_key(event.key.code);
+                mQueue.push(system_event_t(EV_KEY, EV_K_DOWN, key));
                 break;
             }
 
             case sf::Event::KeyReleased:
             {
-                if (mQueue) {
-                    trillek::keycode_t key = translate_key(event.key.code);
-                    mQueue->push(system_event_t(EV_KEY, EV_K_UP, key));
-                } 
+                trillek::keycode_t key = translate_key(event.key.code);
+                mQueue.push(system_event_t(EV_KEY, EV_K_UP, key));
                 break;
             }
 
@@ -252,13 +338,11 @@ sfml_device::dispatch_events()
                 mMouseX = event.mouseMove.x;
                 mMouseY = event.mouseMove.y;
                 force_mouse_location();
-                if (mQueue) {
-                    if (dx) {
-                        mQueue->push(system_event_t(EV_MOUSE, EV_M_DX, dx));
-                    }
-                    if (dy) {
-                        mQueue->push(system_event_t(EV_MOUSE, EV_M_DY, dy));
-                    }
+                if (dx) {
+                    mQueue.push(system_event_t(EV_MOUSE, EV_M_DX, dx));
+                }
+                if (dy) {
+                    mQueue.push(system_event_t(EV_MOUSE, EV_M_DY, dy));
                 }
                 break;
             }
@@ -268,8 +352,8 @@ sfml_device::dispatch_events()
                     break;
                 }
                 int dz = event.mouseWheel.delta;
-                if (mQueue && dz) {
-                    mQueue->push(system_event_t(EV_MOUSE, EV_M_DZ, dz));
+                if (dz) {
+                    mQueue.push(system_event_t(EV_MOUSE, EV_M_DZ, dz));
                 }
                 break;
             }
@@ -304,27 +388,15 @@ sfml_device::dispatch_events()
 }
 
 
-static sfml_device sSfmlDevice;
-
-
+#if 0
 struct sfml_graphics_driver : public graphics_driver {
     interface_key_t implements() const {
         return graphics_driver::s_interface;
     }
 
-    void init(const subsystem_manager& pMgr) {
-        sSfmlDevice.open_window();
-    }
-
-    void pre_shutdown() {
-    }
-
-    void shutdown() {
-        sSfmlDevice.close_window();
-    }
-
 
     void begin_rendering() {
+        sSfmlDevice.activate_for_gl();
         sSfmlDevice.dispatch_events();
         sSfmlDevice.activate_for_gl();
     }
@@ -336,21 +408,24 @@ struct sfml_graphics_driver : public graphics_driver {
         sSfmlDevice.swap_buffers();
     }
 
+    void get_dimensions(uint32_t& pWidth, uint32_t& pHeight) const {
+        pWidth = s_width;
+        pHeight = s_height;
+    }
+
+    void get_config(graphics_config_t& pConfig) const {
+    }
 };
 
 static sfml_graphics_driver sGraphicsDriver;
 
 
 struct sfml_input_driver : public input_driver {
-    interface_key_t implements() const {
-        return input_driver::s_interface;
-    }
 
     void init(const subsystem_manager& pMgr) {
-         system_event_queue& evqueue = pMgr.lookup<system_event_queue>();
-         sSfmlDevice.mQueue = &evqueue;
-         sSfmlDevice.activate_mouse();
-         sSfmlDevice.activate_input();
+    }
+
+    void post_init() {
     }
 
     void pre_shutdown() {
@@ -359,6 +434,10 @@ struct sfml_input_driver : public input_driver {
     }
 
     void shutdown() {
+    }
+
+    void frame() {
+        sSfmlDevice.dispatch_events();
     }
 
     void capture_mouse(bool pCapture) {
@@ -370,20 +449,65 @@ struct sfml_input_driver : public input_driver {
         }
     }
 };
+#endif
 
-static sfml_input_driver sInputDriver;
+
+struct sfml_platform_subsystem : public platform_subsystem {
+    std::unique_ptr<sfml_window_manager> mWindowManager;
+    std::shared_ptr<graphics_device_gl> mDeviceGL;
+
+    bool mEventsActive;
+    system_event_queue* mQueue;
+
+    interface_key_t implements() const {
+        return platform_subsystem::s_interface;
+    }
+
+    virtual window_manager& get_window_manager() {
+        return *mWindowManager;
+    }
+
+    sfml_platform_subsystem() {
+	mEventsActive = false;
+    }
+
+    void pre_init() {
+        mDeviceGL = std::make_shared<graphics_device_gl>();
+        mWindowManager = std::unique_ptr<sfml_window_manager>(new sfml_window_manager(mDeviceGL));
+        mWindowManager->pre_init();
+    }
+
+    void init(const subsystem_manager& pMgr) {
+        mWindowManager->init(pMgr);
+        mDeviceGL->init();
+    }
+
+    void post_init() {
+        mWindowManager->post_init();
+    }
+
+    void pre_shutdown() {
+    }
+
+    void shutdown() {
+        mWindowManager->shutdown();
+    }
+
+    void frame() {
+        mWindowManager->frame();
+    }
+};
+
+
+sfml_platform_subsystem sSfmlPlatform;
+
 
 } }
 
-
 namespace trillek {
-    graphics_driver& get_graphics_driver() {
-        return detail::sGraphicsDriver;
-    }
-
-    input_driver& get_input_driver() {
-        return detail::sInputDriver;
+    platform_subsystem& get_platform_subsystem()
+    {
+        return detail::sSfmlPlatform;
     }
 }
-
 

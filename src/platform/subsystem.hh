@@ -1,10 +1,7 @@
 #ifndef SUBSYSTEM_HH_INCLUDED
 #define SUBSYSTEM_HH_INCLUDED
 
-#include <cstdint>
-#include <memory>
-#include <exception>
-#include <iostream> // XXX
+#include <utils.hh>
 
 namespace trillek {
 
@@ -16,9 +13,26 @@ namespace trillek {
     {
     public:
         virtual interface_key_t implements() const = 0;
+
+        // init() is the call where subsystems can access other subsystems.
+        // Anything which needs to be done before this (e.g. setting up
+        // stuff which other subsystems may need) is done in pre_init().
+        // post_init() is called after this, assuming that all subsystem
+        // interdependencies are now set up.
+
+        virtual void pre_init() = 0;
         virtual void init(const subsystem_manager& pMgr) = 0;
+        virtual void post_init() = 0;
+
+        // pre_shutdown is for subsystems to unhook from other subsystems.
+        // By the time shutdown() is called, it's assumed that nobody will
+        // call your subsystem ever again.
+
         virtual void pre_shutdown() = 0;
         virtual void shutdown() = 0;
+
+    protected:
+        virtual ~subsystem();
     };
 
     class subsystem_manager : public subsystem {
@@ -26,7 +40,9 @@ namespace trillek {
         static constexpr interface_key_t s_interface = "SubsystemManger-1";
 
         void initialise() {
+            pre_init();
             init(*this);
+            post_init();
         }
 
         virtual void load(interface_key_t pKey,
@@ -37,7 +53,6 @@ namespace trillek {
         template<class T> T&
         lookup() const {
             interface_key_t key = T::s_interface;
-            std::cerr << "Looking up interface for " << key << '\n';
             subsystem* subsys = lookup(key);
             if (subsys) {
                 return static_cast<T&>(*subsys);
@@ -46,6 +61,9 @@ namespace trillek {
                 throw std::exception();
             }
         }
+
+    protected:
+        ~subsystem_manager();
     };
 
     subsystem_manager& standard_subsystem_manager();

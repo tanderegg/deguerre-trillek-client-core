@@ -27,7 +27,13 @@ public:
         return system_event_queue::s_interface;
     }
 
+    void pre_init() {
+    }
+
     void init(const subsystem_manager& pMgr) {
+    }
+
+    void post_init() {
         mActive = true;
     }
 
@@ -76,8 +82,6 @@ static system_event_queue_impl
 sSysEventQueue;
 
 } }
-
-
 
 
 namespace trillek {

@@ -1,3 +1,5 @@
 add_subdirectory(include)
+add_subdirectory(maths)
+add_subdirectory(platform)
 add_subdirectory(graphics)
 add_subdirectory(app-m1)

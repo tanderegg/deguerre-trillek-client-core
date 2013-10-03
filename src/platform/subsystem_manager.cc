@@ -10,13 +10,30 @@ private:
     std::unordered_map<interface_key_t,subsystem*> mIfMap;
 
 public:
+    subsystem_manager_impl() {
+    }
+
+    ~subsystem_manager_impl();
+
     interface_key_t implements() const {
         return subsystem_manager::s_interface;
+    }
+
+    void pre_init() {
+        for (auto s: mSubsystems) {
+            s->pre_init();
+        }
     }
 
     void init(const subsystem_manager& pMgr) {
         for (auto s: mSubsystems) {
             s->init(pMgr);
+        }
+    }
+
+    void post_init() {
+        for (auto s: mSubsystems) {
+            s->post_init();
         }
     }
 
@@ -51,9 +68,22 @@ public:
     }
 };
 
+subsystem_manager_impl::~subsystem_manager_impl()
+{
+}
+
+
 } }
 
 namespace trillek {
+
+    subsystem::~subsystem()
+    {
+    }
+
+    subsystem_manager::~subsystem_manager()
+    {
+    }
 
     subsystem_manager&
     standard_subsystem_manager() {
